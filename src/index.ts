@@ -83,9 +83,9 @@ app.use(mw.oauthInitiation({
 app.get("/", (req, res) => {
     const session = req.session as any;
     const payload = session.payload;
+    console.log(payload)
     res.type("json");
     res.send(payload);
-    res.end();
 })
 
 // listen
