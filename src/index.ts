@@ -43,6 +43,7 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
     }
 }))
 
+if (false) {
 // setup oauth callback
 app.use(mw.oauthCallback({
     'clientId': process.env.OAUTH_CLIENT_ID,
@@ -78,9 +79,8 @@ app.use(mw.oauthInitiation({
         return session.payload !== undefined;
     }
 }))
-
+}
 app.get("/", (req, res) => {
-    console.log("foo");
     res.write(JSON.stringify((req.session as any).payload, undefined, 2));
     res.end();
 })
