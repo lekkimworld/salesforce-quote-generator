@@ -33,6 +33,12 @@ app.use(bpraw({
     }
 }))
 
+const renderMainUI = (req : Request, res : Response) => {
+    const session = req.session as any;
+    res.type("json");
+    res.send(session.payload);
+}
+
 // configure canvas app
 app.use(mw.canvasApplicationSignedRequestAuthentication({
     "clientSecret": process.env.OAUTH_CLIENT_SECRET,
@@ -41,7 +47,8 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
         const session = req.session as any;
         session.payload = verifiedSignedRequest
         session.save();
-        res.redirect('/');
+        renderMainUI(req, res);
+        return false;
     }
 }))
 
@@ -81,14 +88,7 @@ app.use(mw.oauthInitiation({
     }
 }))
 
-app.get("/", (req, res) => {
-    const session = req.session as any;
-    console.log(session);
-    const payload = session.payload;
-    console.log(payload)
-    res.type("json");
-    res.send(payload);
-})
+app.get("/", renderMainUI);
 
 // listen
 app.listen(process.env.PORT || 8080);
