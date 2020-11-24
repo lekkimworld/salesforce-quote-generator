@@ -31,6 +31,18 @@ app.use(bpraw({
     }
 }))
 
+// configure canvas app
+app.use(mw.canvasApplicationSignedRequestAuthentication({
+    "clientSecret": process.env.OAUTH_CLIENT_SECRET,
+    "callback": (req : Request, res : Response, verifiedSignedRequest : any) => {
+        console.log("Received verified signed request from Salesforce");
+        const session = req.session as any;
+        session.payload = verifiedSignedRequest
+        session.save();
+        res.redirect('/');
+    }
+}))
+
 // setup oauth callback
 app.use(mw.oauthCallback({
     'clientId': process.env.OAUTH_CLIENT_ID,
@@ -58,34 +70,17 @@ app.use(mw.oauthInitiation({
     'redirectUri': process.env.OAUTH_REDIRECT_URI,
     'callback': (req : Request) => {
         // save session
-        req.session.save()
-        
-        // log
-        console.log('See if we have payload in session')
         const session = req.session as any;
-        if (!session || !session.payload) {
-            // we don't
-            console.log('No payload found in session - returning false to initiate dance')
-            return false
-        }
-        console.log('We did - return true to continue middleware chain')
-        return true
-    }
-}))
+        session.save()
 
-// configure canvas app
-app.use(mw.canvasApplicationSignedRequestAuthentication({
-    "clientSecret": process.env.OAUTH_CLIENT_SECRET,
-    "callback": (req : Request, res : Response, verifiedSignedRequest : any) => {
-        const session = req.session as any;
-        session.payload = verifiedSignedRequest
-        res.redirect('/')
+        // if we are running in canvas mode ignore
+        if (req.path === "/canvas") return true;
+        if (session.payload !== undefined) return true;
     }
 }))
 
 app.get("/", (req, res) => {
-    res.type("text");
-    res.status(200);
+    console.log("foo");
     res.write(JSON.stringify((req.session as any).payload, undefined, 2));
     res.end();
 })
