@@ -75,7 +75,7 @@ app.use(mw.oauthInitiation({
 
         // if we are running in canvas mode ignore
         if (req.path === "/canvas") return true;
-        if (session.payload !== undefined) return true;
+        return session.payload !== undefined;
     }
 }))
 
