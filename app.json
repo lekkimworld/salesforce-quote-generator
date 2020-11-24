@@ -1,0 +1,25 @@
+{
+    "name": "salesforce-quote-generator",
+    "description": "Salesforce Quote Generator",
+    "repository": "https://github.com/lekkimworld/salesforce-quote-generator",
+    "success_url": "/",
+    "env": {
+
+    },
+    "formation": {
+        "web": {
+            "quantity": 1,
+            "size": "free"
+        }
+    },
+    "addons": [{
+            "plan": "heroku-redis:hobby-dev"
+        },
+        {
+            "plan": "papertrail:choklad"
+        }
+    ],
+    "environments": {
+
+    }
+}
