@@ -21,7 +21,8 @@ app.use(session({
     "store": new RedisStore({
         "client": redisClient
     }),
-    "secret": process.env.SESSION_SECRET || uuid()
+    "saveUninitialized": true, 
+    "secret": process.env.SESSION_SECRET || uuid(),
 }))
 app.use(bpraw({
     "type": (req : IncomingMessage) => {
