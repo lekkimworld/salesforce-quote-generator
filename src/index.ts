@@ -19,7 +19,24 @@ dotenv_config();
 const app = express();
 
 // configure session
-const redisClient = createRedisClient(process.env.REDIS_URL as string);
+const redisClient = (function() {
+    const redis_uri = process.env.REDIS_URL ? url.parse(process.env.REDIS_URL as string) : undefined;
+    if (process.env.REDIS_URL && redis_uri && redis_uri.protocol!.indexOf("rediss") === 0) {
+        return createRedisClient({
+            port: Number.parseInt(redis_uri.port!),
+            host: redis_uri.hostname!,
+            password: redis_uri.auth!.split(':')[1],
+            db: 0,
+            tls: {
+            rejectUnauthorized: false,
+            requestCert: true,
+            agent: false
+            }
+        })
+     } else {
+         return createRedisClient(process.env.REDIS_URL as string);
+     }
+})();
 const RedisStore = connectRedis(session);
 app.use(session({
     "store": new RedisStore({
