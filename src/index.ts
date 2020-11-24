@@ -22,6 +22,7 @@ app.use(session({
         "client": redisClient
     }),
     "saveUninitialized": true, 
+    "resave": true,
     "secret": process.env.SESSION_SECRET || uuid(),
 }))
 app.use(bpraw({
@@ -44,7 +45,6 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
     }
 }))
 
-if (false) {
 // setup oauth callback
 app.use(mw.oauthCallback({
     'clientId': process.env.OAUTH_CLIENT_ID,
@@ -80,9 +80,10 @@ app.use(mw.oauthInitiation({
         return session.payload !== undefined;
     }
 }))
-}
+
 app.get("/", (req, res) => {
     const session = req.session as any;
+    console.log(session);
     const payload = session.payload;
     console.log(payload)
     res.type("json");
