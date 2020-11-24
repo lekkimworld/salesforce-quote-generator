@@ -28,9 +28,9 @@ const redisClient = (function() {
             password: redis_uri.auth!.split(':')[1],
             db: 0,
             tls: {
-            rejectUnauthorized: false,
-            requestCert: true,
-            agent: false
+                rejectUnauthorized: false,
+                requestCert: true,
+                agent: false
             }
         })
      } else {
@@ -38,6 +38,7 @@ const redisClient = (function() {
      }
 })();
 const RedisStore = connectRedis(session);
+app.set('trust proxy', 1);
 app.use(session({
     "store": new RedisStore({
         "client": redisClient
