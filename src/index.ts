@@ -8,7 +8,11 @@ import {raw as bpraw} from "body-parser";
 import * as url from "url";
 //@ts-ignore
 import mw from "salesforce-oauth-express-middleware";
+import path from "path";
 import { IncomingMessage } from "http";
+import configureHandlebars from './handlebars';
+import configureApiRoutes from './api';
+import { ApplicationUser, QuoteContext } from "./types";
 
 // read .env if applicable and create app
 dotenv_config();
@@ -24,6 +28,10 @@ app.use(session({
     "saveUninitialized": true, 
     "resave": true,
     "secret": process.env.SESSION_SECRET || uuid(),
+    "cookie": {
+        "sameSite": "none",
+        "secure": true
+    }
 }))
 app.use(bpraw({
     "type": (req : IncomingMessage) => {
@@ -32,29 +40,15 @@ app.use(bpraw({
         return rc
     }
 }))
-
-interface QuoteContext {
-    accessToken : string;
-    opportunityId? : string;
-    baseUrl : string;
-    user : ApplicationUser;
-}
-interface ApplicationUser {
-    userId : string;
-    userName : string;
-    fullName : string;
-    email : string;
-    profilePhotoUrl : string;
-    profileThumbnailUrl : string;
-}
+app.use(express.static(path.join(__dirname, '..', 'public')));
+configureHandlebars(app);
+configureApiRoutes(app);
 
 const renderMainUI = (req : Request, res : Response) => {
     const session = req.session as any;
     const payload = session.quoteContext;
     
-
-    res.type("json");
-    res.send(payload);
+    res.render("root", payload);
 }
 
 // configure canvas app
@@ -67,9 +61,11 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
 
         // create context
         const ctx = {
+            "isCanvas": true,
             "accessToken": verifiedSignedRequest.client.oauthToken,
             "opportunityId": verifiedSignedRequest.context.environment.parameters.recordId,
-            "baseUrl": `${verifiedSignedRequest.client.instanceUrl}${verifiedSignedRequest.context.links.restUrl}`,
+            "instanceUrl": verifiedSignedRequest.client.instanceUrl,
+            "restUrl": `${verifiedSignedRequest.client.instanceUrl}${verifiedSignedRequest.context.links.restUrl}`,
             "user": {
                 "fullName": verifiedSignedRequest.context.user.fullName,
                 "profilePhotoUrl": verifiedSignedRequest.context.user.profilePhotoUrl,
@@ -105,9 +101,11 @@ app.use(mw.oauthCallback({
         
         // create context
         const ctx = {
+            "isCanvas": false,
             "accessToken": data.payload.access_token,
-            "opportunityId": undefined,
-            "baseUrl": `${data.payload.instance_url}${data.identity.urls.rest}`,
+            "opportunityId": '00609000003NG9mAAG',
+            "instanceUrl": data.payload.instance_url, 
+            "restUrl": `${data.payload.instance_url}${data.identity.urls.rest}`,
             "user": {
                 "fullName": data.identity.display_name,
                 "profilePhotoUrl": data.identity.photos.picture,
@@ -136,7 +134,7 @@ app.use(mw.oauthInitiation({
 
         // if we are running in canvas mode ignore
         if (req.path === "/canvas") return true;
-        return session.payload !== undefined;
+        if (session.payload !== undefined) return true;
     }
 }))
 
