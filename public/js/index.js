@@ -4,6 +4,6 @@ window.getOpportunityLineItems = () => {
         "credentials": "include",
         "cors": true
     }).then(res => res.json()).then(data => {
-        console.log(data)
+        $("#main-body").text(JSON.stringify(data, undefined, 2))
     })
 }

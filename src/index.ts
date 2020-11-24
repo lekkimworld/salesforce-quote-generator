@@ -38,7 +38,9 @@ const redisClient = (function() {
      }
 })();
 const RedisStore = connectRedis(session);
-app.set('trust proxy', 1);
+if (process.env.NODE_ENV === "production") {
+    app.set('trust proxy', 1);
+}
 app.use(session({
     "store": new RedisStore({
         "client": redisClient
@@ -46,10 +48,10 @@ app.use(session({
     "saveUninitialized": true, 
     "resave": true,
     "secret": process.env.SESSION_SECRET || uuid(),
-    "cookie": {
+    "cookie": process.env.NODE_ENV === "production" ? {
         "sameSite": "none",
         "secure": true
-    }
+    } : undefined
 }))
 app.use(bpraw({
     "type": (req : IncomingMessage) => {
