@@ -33,10 +33,28 @@ app.use(bpraw({
     }
 }))
 
+interface QuoteContext {
+    accessToken : string;
+    opportunityId? : string;
+    baseUrl : string;
+    user : ApplicationUser;
+}
+interface ApplicationUser {
+    userId : string;
+    userName : string;
+    fullName : string;
+    email : string;
+    profilePhotoUrl : string;
+    profileThumbnailUrl : string;
+}
+
 const renderMainUI = (req : Request, res : Response) => {
     const session = req.session as any;
+    const payload = session.quoteContext;
+    
+
     res.type("json");
-    res.send(session.payload);
+    res.send(payload);
 }
 
 // configure canvas app
@@ -46,7 +64,25 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
         console.log("Received verified signed request from Salesforce");
         const session = req.session as any;
         session.payload = verifiedSignedRequest
+
+        // create context
+        const ctx = {
+            "accessToken": verifiedSignedRequest.client.oauthToken,
+            "opportunityId": verifiedSignedRequest.context.environment.parameters.recordId,
+            "baseUrl": `${verifiedSignedRequest.client.instanceUrl}${verifiedSignedRequest.context.links.restUrl}`,
+            "user": {
+                "fullName": verifiedSignedRequest.context.user.fullName,
+                "profilePhotoUrl": verifiedSignedRequest.context.user.profilePhotoUrl,
+                "profileThumbnailUrl": verifiedSignedRequest.context.user.profileThumbnailUrl,
+                "userId": verifiedSignedRequest.context.user.userId, 
+                "userName": verifiedSignedRequest.context.user.userName, 
+                "email": verifiedSignedRequest.context.user.email
+            } as ApplicationUser
+        } as QuoteContext;
+        session.quoteContext = ctx;
         session.save();
+
+        // render
         renderMainUI(req, res);
         return false;
     }
@@ -60,13 +96,29 @@ app.use(mw.oauthCallback({
     "verifyIDToken": true,
     'callback': (req : Request, res : Response) => {
         // log
-        const payload = res.locals.sfoauth;
+        const data = res.locals.sfoauth;
         console.log(`Received callback from middleware callback`)
 
         // set data in session
         const session = req.session as any;
-        session.payload = payload;
-        req.session.save()
+        session.payload = data;
+        
+        // create context
+        const ctx = {
+            "accessToken": data.payload.access_token,
+            "opportunityId": undefined,
+            "baseUrl": `${data.payload.instance_url}${data.identity.urls.rest}`,
+            "user": {
+                "fullName": data.identity.display_name,
+                "profilePhotoUrl": data.identity.photos.picture,
+                "profileThumbnailUrl": data.identity.photos.thumbnail,
+                "userId": data.identity.user_id, 
+                "userName": data.identity.username, 
+                "email": data.identity.email
+            } as ApplicationUser
+        } as QuoteContext;
+        session.quoteContext = ctx;
+        session.save();
         
         // send redirect
         return res.redirect('/')
