@@ -4,7 +4,7 @@ import {config as dotenv_config} from "dotenv";
 import {createClient as createRedisClient} from "redis";
 import connectRedis from "connect-redis";
 import {v4 as uuid} from "uuid";
-import {raw as bpraw} from "body-parser";
+import {raw as bpraw, json as  bpjson} from "body-parser";
 import * as url from "url";
 //@ts-ignore
 import mw from "salesforce-oauth-express-middleware";
@@ -53,6 +53,7 @@ app.use(session({
         "secure": true
     } : undefined
 }))
+app.use(bpjson());
 app.use(bpraw({
     "type": (req : IncomingMessage) => {
         const path = url.parse(req.url!).path;
@@ -81,6 +82,7 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
 
         // create context
         const ctx = {
+            "canvasApi": `https://${verifiedSignedRequest.client.instanceUrl}.salesforce.com/canvas/sdk/js/50.0/canvas-all.js`,
             "isCanvas": true,
             "accessToken": verifiedSignedRequest.client.oauthToken,
             "opportunityId": verifiedSignedRequest.context.environment.parameters.recordId,
@@ -92,7 +94,8 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
                 "profileThumbnailUrl": verifiedSignedRequest.context.user.profileThumbnailUrl,
                 "userId": verifiedSignedRequest.context.user.userId, 
                 "userName": verifiedSignedRequest.context.user.userName, 
-                "email": verifiedSignedRequest.context.user.email
+                "email": verifiedSignedRequest.context.user.email,
+                "currency": verifiedSignedRequest.context.organization.currencyIsoCode
             } as ApplicationUser
         } as QuoteContext;
         session.quoteContext = ctx;
@@ -132,7 +135,8 @@ app.use(mw.oauthCallback({
                 "profileThumbnailUrl": data.identity.photos.thumbnail,
                 "userId": data.identity.user_id, 
                 "userName": data.identity.username, 
-                "email": data.identity.email
+                "email": data.identity.email,
+                "currency": 'SEK'
             } as ApplicationUser
         } as QuoteContext;
         session.quoteContext = ctx;

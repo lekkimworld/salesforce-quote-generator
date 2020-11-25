@@ -16,6 +16,7 @@
   <script src="/js/index.js" type="text/javascript"></script>
 </head>
 {{#if isCanvas}}
+<script type="text/javascript" src="{{canvasApi}}"></script>
 <body style="padding-top: 0.5rem">
 {{else}}
 <body>
@@ -42,7 +43,7 @@
 </nav>
 
 {{/unless}}
-  <div class="container-fluid main-body" id="main-body">
+  <div class="container main-body" id="main-body">
   {{{body}}}
   </div>
 {{#unless isCanvas}}
