@@ -78,11 +78,9 @@
             <div class="col col-2"></div>
             <div class="col col-2 text-right">${data.records.reduce((prev,r) => prev+=r.TotalPrice, 0)}</div>`
             html += `</div>`
-
             html += `<div class="text-right mt-5">
             <button class="btn btn-primary">Create Quote</button>
             </div>`
-
             $("#main-body").html(html)
 
             $("button").on("click", () => {
@@ -139,20 +137,34 @@
         getOpportunityLineItems().then(data => {
             // build base ui
             let html = `<h1>${data.records[0].Opportunity.Name}</h1>`;
+            html += `<div class="mt-2 mb-2"><b>Contact: </b><select name="contacts"></select></div>`;
             html += `<div id="table"></div>`;
             html += `<div class="text-right mt-5">
             <button class="btn btn-success" rel="save">Save Quote</button>
             <button class="btn btn-danger" rel="reset">Reset</button>
-        </div>`
+            </div>`
 
             $("#main-body").html(html)
             $(`button[rel="reset"]`).on("click", () => {
                 renderEditQuote();
             })
             $(`button[rel="save"]`).on("click", () => {
-                doPost(`/api/savequote`, data.records).then((data) => {
+                const contacts = document.querySelector(`select[name="contacts"]`);
+                const contactId = contacts.options[contacts.selectedIndex].value;
+                const body = {
+                    "contactId": contactId,
+                    "records": data.records
+                }
+                doPost(`/api/savequote`, body).then((data) => {
                     renderOpportunityLineItems();
                 })
+            })
+            doGet("/api/contacts").then(data => {
+                const elem = $(`select[name="contacts"]`);
+                elem.html(data.records.reduce((prev, c) => {
+                    prev += `<option value="${c.Id}">${c.Name}</option>`;
+                    return prev;
+                }, ""))
             })
             $(`#table`).on("change", (evt) => {
                 const name = evt.target.name;

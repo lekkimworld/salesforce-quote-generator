@@ -29,8 +29,21 @@ export default (app : Application) => {
         res.send(lineitems);
     })
 
+    router.get("/contacts", async (req, res) => {
+        const session = req.session as any;
+        const ctx = session.quoteContext as QuoteContext;
+
+        const conn = new jsforce.Connection({
+            "instanceUrl": ctx.instanceUrl,
+            "accessToken": ctx.accessToken
+        });
+        const contacts = await conn.query(`select id,name from contact where accountid in (select accountid from opportunity where id='${ctx.opportunityId}') order by name asc`);
+        res.send(contacts);
+    })
+
     router.post("/savequote", async (req, res) => {
-        const records = req.body;
+        const contactId = req.body.contactId;
+        const records = req.body.records;
         const session = req.session as any;
         const ctx = session.quoteContext as QuoteContext;
 
@@ -45,7 +58,8 @@ export default (app : Application) => {
             "Name": `Quote - ${records[0].Opportunity.Name}`,
             "OpportunityId": ctx.opportunityId,
             "Status": "Draft",
-            "Pricebook2Id": records[0].Opportunity.Pricebook2Id
+            "Pricebook2Id": records[0].Opportunity.Pricebook2Id,
+            "ContactId": contactId
         }).then((data : any) => {
             // create a quote line per product with a positive quantity
             return Promise.all([Promise.resolve(data), conn.sobject("QuoteLineItem").create(records.reduce((prev : any[], r : any) => {
