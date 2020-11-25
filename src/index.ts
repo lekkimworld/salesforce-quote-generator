@@ -82,7 +82,7 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
 
         // create context
         const ctx = {
-            "canvasApi": `${verifiedSignedRequest.client.instanceUrl}.salesforce.com/canvas/sdk/js/50.0/canvas-all.js`,
+            "canvasApi": `${verifiedSignedRequest.client.instanceUrl}/canvas/sdk/js/50.0/canvas-all.js`,
             "isCanvas": true,
             "accessToken": verifiedSignedRequest.client.oauthToken,
             "opportunityId": verifiedSignedRequest.context.environment.parameters.recordId,
