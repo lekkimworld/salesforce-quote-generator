@@ -34,31 +34,43 @@ export default (app : Application) => {
         const session = req.session as any;
         const ctx = session.quoteContext as QuoteContext;
 
+        // get connection
         const conn = new jsforce.Connection({
             "instanceUrl": ctx.instanceUrl,
             "accessToken": ctx.accessToken
         });
+
+        // create quote
         conn.sobject("Quote").create({
             "Name": `Quote - ${records[0].Opportunity.Name}`,
             "OpportunityId": ctx.opportunityId,
             "Status": "Draft",
             "Pricebook2Id": records[0].Opportunity.Pricebook2Id
         }).then((data : any) => {
-            return Promise.all([Promise.resolve(data), conn.sobject("QuoteLineItem").create(records.map((r : any) => {
-                return {
-                    "QuoteId": data.id,
-                    "Quantity": r.Quantity,
-                    "UnitPrice": r.UnitPrice,
-                    "OpportunityLineItemId": r.Id,
-                    "Product2Id": r.Product2Id,
-                    "PricebookEntryId": r.PricebookEntryId
+            // create a quote line per product with a positive quantity
+            return Promise.all([Promise.resolve(data), conn.sobject("QuoteLineItem").create(records.reduce((prev : any[], r : any) => {
+                if (r.Quantity > 0) {
+                    prev.push({
+                        "QuoteId": data.id,
+                        "Quantity": r.Quantity,
+                        "UnitPrice": r.UnitPrice,
+                        "OpportunityLineItemId": r.Id,
+                        "Product2Id": r.Product2Id,
+                        "PricebookEntryId": r.PricebookEntryId
+                    })
                 }
-            }))])
-        }).then((datas : any) => {
-            const quoteData = datas[0];
-            const quoteItemData = datas[1];
-            console.log(quoteData.id);
-            console.log(quoteItemData);
+                return prev;
+            }, []))])
+        }).then((sfData : any) => {
+            const quoteData = sfData[0];
+            const quoteItemData = sfData[1];
+            
+            // ensure we created the quote item lines ok
+            const qlSuccess = quoteItemData.reduce((prev : boolean, q : any) => {
+                if (q.success === false) return false;
+                return prev;
+            }, true);
+            if (!qlSuccess) return Promise.reject(Error("Unable to create all quote item lines"));
             
             // build pdf
             return generatePDF(records).then(buffer => {
