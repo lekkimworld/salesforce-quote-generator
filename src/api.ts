@@ -1,6 +1,7 @@
 import express, { Application, Response, Request, NextFunction } from "express";
 import jsforce from "jsforce";
 import {QuoteContext} from "./types";
+import generatePDF from "./pdf";
 
 //select id,name,quantity,totalprice,listprice,productcode,unitprice from opportunitylineitem where opportunityid='00609000003NG9mAAG'
 //select id,discount,quantity,unitprice,product2id,opportunitylineitemid from quotelineitem where quoteid='0Q009000000Csq2CAC'
@@ -60,7 +61,12 @@ export default (app : Application) => {
             console.log(quoteItemData);
             
             // build pdf
-
+            return generatePDF(records).then(buffer => {
+                return conn.sobject("QuoteDocument").create({
+                    "QuoteId": quoteData.id,
+                    "Document": buffer.toString("base64")
+                })
+            })
 
         }).then(() => {
             res.status(201).send({
