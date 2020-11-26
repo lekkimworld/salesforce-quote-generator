@@ -1,58 +1,22 @@
 import express, { Request, Response } from "express";
-import session from "express-session";
 import {config as dotenv_config} from "dotenv";
-import {createClient as createRedisClient} from "redis";
-import connectRedis from "connect-redis";
-import {v4 as uuid} from "uuid";
+import url from "url";
 import {raw as bpraw, json as  bpjson} from "body-parser";
-import * as url from "url";
 //@ts-ignore
 import mw from "salesforce-oauth-express-middleware";
-import path from "path";
 import { IncomingMessage } from "http";
 import configureHandlebars from './handlebars';
 import configureApiRoutes from './api';
+import createRedisClient from "./redis";
+import configureRedisSession from "./redis-session";
+import configureStatic from "./static";
 import { ApplicationUser, QuoteContext } from "./types";
 
 // read .env if applicable and create app
 dotenv_config();
 const app = express();
 
-// configure session
-const redisClient = (function() {
-    const redis_uri = process.env.REDIS_URL ? url.parse(process.env.REDIS_URL as string) : undefined;
-    if (process.env.REDIS_URL && redis_uri && redis_uri.protocol!.indexOf("rediss") === 0) {
-        return createRedisClient({
-            port: Number.parseInt(redis_uri.port!),
-            host: redis_uri.hostname!,
-            password: redis_uri.auth!.split(':')[1],
-            db: 0,
-            tls: {
-                rejectUnauthorized: false,
-                requestCert: true,
-                agent: false
-            }
-        })
-     } else {
-         return createRedisClient(process.env.REDIS_URL as string);
-     }
-})();
-const RedisStore = connectRedis(session);
-if (process.env.NODE_ENV === "production") {
-    app.set('trust proxy', 1);
-}
-app.use(session({
-    "store": new RedisStore({
-        "client": redisClient
-    }),
-    "saveUninitialized": true, 
-    "resave": true,
-    "secret": process.env.SESSION_SECRET || uuid(),
-    "cookie": process.env.NODE_ENV === "production" ? {
-        "sameSite": "none",
-        "secure": true
-    } : undefined
-}))
+// configure 
 app.use(bpjson());
 app.use(bpraw({
     "type": (req : IncomingMessage) => {
@@ -61,7 +25,8 @@ app.use(bpraw({
         return rc
     }
 }))
-app.use(express.static(path.join(__dirname, '..', 'public')));
+configureRedisSession(app, createRedisClient());
+configureStatic(app);
 configureHandlebars(app);
 configureApiRoutes(app);
 
