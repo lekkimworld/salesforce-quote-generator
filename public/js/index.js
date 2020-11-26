@@ -37,8 +37,48 @@
         return doGet("/api/opportunitylineitems")
     }
 
+    const renderSelectOpportunity = () => {
+        let html = `<h1>Opportunity Selection</h1>`;
+        html += `<div class="mt-2 mb-2"><b>Opportunity: </b><select name="opportunities"></select></div>`;
+        html += `<div><button class="btn btn-primary" rel="selectopportunity">Select</button></div>`
+        $("#main-body").html(html)
+
+        doGet("/api/opportunities").then(data => {
+            const elem = $(`select[name="opportunities"]`);
+            elem.html(data.records.reduce((prev, c) => {
+                prev += `<option value="${c.Id}">${c.Name}</option>`;
+                return prev;
+            }, ""))
+        })
+
+        $(`button[rel="selectopportunity"]`).on("click", () => {
+            const elem = document.querySelector(`select[name="opportunities"]`);
+            const opportunityId = elem.options[elem.selectedIndex].value;
+            console.log(`Selected Opportunity ID: ${opportunityId}`);
+            doPost("/api/selectopportunity", { opportunityId }).then(data => {
+                renderOpportunityLineItems();
+            })
+        })
+
+    }
+
     const renderOpportunityLineItems = () => {
         getOpportunityLineItems().then(data => {
+            if (!data.records || !data.records.length) {
+                let html = `<div>No Line Items for Opportunity</div>`;
+                html += `<div class="text-right mt-5">
+                <button class="btn btn-primary">Back</button>
+                </div>`
+                $("#main-body").html(html);
+
+                $("button").on("click", () => {
+                    renderSelectOpportunity();
+                })
+
+                return;
+            }
+
+            // render table with opportunity line items
             let html = `<h1>${data.records[0].Opportunity.Name}</h1>`;
             html += `<div class="row">`;
             html += `<div class="col col-2">Product Code</div>
@@ -183,5 +223,15 @@
     }
 
     window.startApp = () => {
-        renderOpportunityLineItems();
+        doGet("/api/opportunityinfo").then(data => {
+            if (data.status !== "OK") {
+                renderSelectOpportunity();
+            } else {
+                renderOpportunityLineItems();
+            }
+        })
+
+        $(`a.navbar-brand`).on("click", () => {
+            renderSelectOpportunity();
+        })
     }

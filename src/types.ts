@@ -1,5 +1,4 @@
 export interface QuoteContext {
-    canvasApi? : string;
     isCanvas : boolean;
     accessToken : string;
     opportunityId? : string;
@@ -14,5 +13,4 @@ export interface ApplicationUser {
     email : string;
     profilePhotoUrl : string;
     profileThumbnailUrl : string;
-    currency : string;
 }

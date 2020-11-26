@@ -3,8 +3,13 @@ import jsforce from "jsforce";
 import {QuoteContext} from "./types";
 import generatePDF from "./pdf";
 
-//select id,name,quantity,totalprice,listprice,productcode,unitprice from opportunitylineitem where opportunityid='00609000003NG9mAAG'
-//select id,discount,quantity,unitprice,product2id,opportunitylineitemid from quotelineitem where quoteid='0Q009000000Csq2CAC'
+const getJSForceConnection = (ctx : QuoteContext) => {
+    const conn = new jsforce.Connection({
+        "instanceUrl": ctx.instanceUrl,
+        "accessToken": ctx.accessToken
+    });
+    return conn;
+}
 
 export default (app : Application) => {
     
@@ -17,14 +22,53 @@ export default (app : Application) => {
         next();
     })
 
+    router.get("/opportunityinfo", async (req, res) => {
+        const session = req.session as any;
+        const ctx = session.quoteContext as QuoteContext;
+        if (!ctx.opportunityId || !ctx.opportunityId.length) {
+            res.send({
+                "status": "NO_OPPORTUNITY",
+                "opportunityId": undefined
+            })
+        } else {
+            res.send({
+                "status": "OK",
+                "opportunityId": ctx.opportunityId
+            })
+        }
+    })
+
+    router.get("/opportunities", async (req, res) => {
+        const session = req.session as any;
+        const ctx = session.quoteContext as QuoteContext;
+        const conn = getJSForceConnection(ctx);
+        const data = await conn.query(`select id,name from opportunity where stagename='${process.env.OPPORTUNITY_STAGENAME || "Qualification"}' order by Name asc`);
+        res.send({
+            "status": "OK",
+            "records": data.records
+        })
+    })
+
+    router.post("/selectopportunity", async (req, res) => {
+        const body = req.body;
+        if (!body.opportunityId) throw Error("Expected opportunityId in body");
+
+        const session = req.session as any;
+        const ctx = session.quoteContext as QuoteContext;
+        ctx.opportunityId = body.opportunityId;
+        session.save();
+
+        return res.send({
+            "status": "OK",
+            "opportunityId": ctx.opportunityId
+        })
+    })
+
     router.get("/opportunitylineitems", async (req, res) => {
         const session = req.session as any;
         const ctx = session.quoteContext as QuoteContext;
 
-        const conn = new jsforce.Connection({
-            "instanceUrl": ctx.instanceUrl,
-            "accessToken": ctx.accessToken
-        });
+        const conn = getJSForceConnection(ctx);
         const lineitems = await conn.query(`select id,name,quantity,totalprice,listprice,productcode,unitprice,product2id,PricebookEntryId,opportunity.name,opportunity.Pricebook2Id from opportunitylineitem where opportunityid='${ctx.opportunityId}'`);
         res.send(lineitems);
     })
@@ -33,10 +77,7 @@ export default (app : Application) => {
         const session = req.session as any;
         const ctx = session.quoteContext as QuoteContext;
 
-        const conn = new jsforce.Connection({
-            "instanceUrl": ctx.instanceUrl,
-            "accessToken": ctx.accessToken
-        });
+        const conn = getJSForceConnection(ctx);
         const contacts = await conn.query(`select id,name from contact where accountid in (select accountid from opportunity where id='${ctx.opportunityId}') order by name asc`);
         res.send(contacts);
     })

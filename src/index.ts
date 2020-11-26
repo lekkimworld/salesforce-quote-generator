@@ -82,7 +82,6 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
 
         // create context
         const ctx = {
-            "canvasApi": `${verifiedSignedRequest.client.instanceUrl}/canvas/sdk/js/50.0/canvas-all.js`,
             "isCanvas": true,
             "accessToken": verifiedSignedRequest.client.oauthToken,
             "opportunityId": verifiedSignedRequest.context.environment.parameters.recordId,
@@ -94,8 +93,8 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
                 "profileThumbnailUrl": verifiedSignedRequest.context.user.profileThumbnailUrl,
                 "userId": verifiedSignedRequest.context.user.userId, 
                 "userName": verifiedSignedRequest.context.user.userName, 
-                "email": verifiedSignedRequest.context.user.email,
-                "currency": verifiedSignedRequest.context.organization.currencyIsoCode
+                "email": verifiedSignedRequest.context.user.email/*,
+                "currency": verifiedSignedRequest.context.organization.currencyIsoCode*/
             } as ApplicationUser
         } as QuoteContext;
         session.quoteContext = ctx;
@@ -126,7 +125,7 @@ app.use(mw.oauthCallback({
         const ctx = {
             "isCanvas": false,
             "accessToken": data.payload.access_token,
-            "opportunityId": '00609000003NG9mAAG',
+            "opportunityId": undefined,
             "instanceUrl": data.payload.instance_url, 
             "restUrl": `${data.payload.instance_url}${data.identity.urls.rest}`,
             "user": {
@@ -135,8 +134,8 @@ app.use(mw.oauthCallback({
                 "profileThumbnailUrl": data.identity.photos.thumbnail,
                 "userId": data.identity.user_id, 
                 "userName": data.identity.username, 
-                "email": data.identity.email,
-                "currency": 'SEK'
+                "email": data.identity.email/*,
+                "currency": 'SEK'*/
             } as ApplicationUser
         } as QuoteContext;
         session.quoteContext = ctx;
