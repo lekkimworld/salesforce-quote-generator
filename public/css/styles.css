@@ -6,6 +6,8 @@
 .col {
     border-left: 1px solid black;
     border-right: 1px solid black;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .row:first-child {

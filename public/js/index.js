@@ -111,9 +111,9 @@
                 html += `</div>`
             })
             html += `<div class="row">`;
-            html += `<div class="col col-2"></div>
+            html += `<div class="col col-1"></div>
             <div class="col col-3"></div>
-            <div class="col col-1 text-right">${data.records.reduce((prev,r) => prev+=r.Quantity, 0)}</div>
+            <div class="col col-2 text-right">${data.records.reduce((prev,r) => prev+=r.Quantity, 0)}</div>
             <div class="col col-2"></div>
             <div class="col col-2"></div>
             <div class="col col-2 text-right">${data.records.reduce((prev,r) => prev+=r.TotalPrice, 0)}</div>`
@@ -163,9 +163,9 @@
                 html += `</div>`
             })
             html += `<div class="row">`;
-            html += `<div class="col col-2"></div>
+            html += `<div class="col col-1"></div>
             <div class="col col-3"></div>
-            <div class="col col-1 text-right">${data.records.reduce((prev,r) => prev+=r.Quantity, 0)}</div>
+            <div class="col col-2 text-right">${data.records.reduce((prev,r) => prev+=r.Quantity, 0)}</div>
             <div class="col col-2"></div>
             <div class="col col-2"></div>
             <div class="col col-2 text-right">${data.records.reduce((prev,r) => prev+=r.TotalPrice, 0)}</div>`
