@@ -1,0 +1,61 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API for sf-quote-gen",
+        "version": "1.0.0",
+        "title": "Salesforce quote-gen"
+    },
+    "host": "sf-quote-gen-staging.herokuapp.com",
+    "basePath": "/api",
+    "schemes": [
+        "https"
+    ],
+    "paths": {
+        "/quotepdf": {
+            "post": {
+                "summary": "Generate PDF w/ line items for quote",
+                "description": "",
+                "operationId": "quotepdf",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [{
+                    "in": "body",
+                    "name": "body",
+                    "description": "Information about the quote",
+                    "required": true,
+                    "schema": {
+                        "$ref": "#/definitions/Quote"
+                    }
+                }],
+                "responses": {
+                    "417": {
+                        "description": "Missing Quote ID"
+                    }
+                }
+            }
+        }
+    },
+    "security": [{
+        "basicAuth": []
+    }],
+    "securityDefinitions": {
+        "basicAuth": {
+            "type": "basic"
+        }
+    },
+    "definitions": {
+        "Quote": {
+            "type": "object",
+            "properties": {
+                "quoteId": {
+                    "type": "string",
+                    "description": "The ID of the quote"
+                }
+            }
+        }
+    }
+}
