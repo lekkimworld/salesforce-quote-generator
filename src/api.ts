@@ -2,13 +2,13 @@ import express, { Application, Response, Request, NextFunction } from "express";
 import jsforce from "jsforce";
 import {QuoteContext} from "./types";
 import generatePDF from "./pdf";
+import getJSForceConnection from "./salesforce";
 
-const getJSForceConnection = (ctx : QuoteContext) => {
-    const conn = new jsforce.Connection({
-        "instanceUrl": ctx.instanceUrl,
-        "accessToken": ctx.accessToken
-    });
-    return conn;
+const savePDFToQuote = (conn : jsforce.Connection, quoteId : string, data : Buffer | string) : Promise<any> => {
+    return conn.sobject("QuoteDocument").create({
+        "QuoteId": quoteId,
+        "Document": typeof data === "string" ? data : data.toString("base64")
+    })
 }
 
 export default (app : Application) => {
@@ -20,6 +20,31 @@ export default (app : Application) => {
             res.type("json");
         }
         next();
+    })
+
+    router.post("/quotepdf", async (req, res) => {
+        const authHeader = req.headers.authorization;
+        const authHeaderCalc = `Basic ${Buffer.from(`${process.env.BASIC_AUTH_USERNAME}:${process.env.BASIC_AUTH_PASSWORD}`).toString("base64")}`;
+        if (!authHeader || authHeader != authHeaderCalc) return res.status(401).send({"status": "ERROR", "message": "Unauthenticated"});
+
+        // extract quoteid from request
+        const quoteId = req.body.quoteId;
+        if (!quoteId) return res.status(417).send({"status": "ERROR", "message": "Missing quoteId"});
+
+        // get quote line items
+        const conn = await getJSForceConnection();
+        const data = await conn.query(`SELECT Product2.ProductCode, Product2.Name, Quantity, UnitPrice, TotalPrice, OpportunityLineItemId, Product2Id, PricebookEntryId from QuoteLineItem WHERE QuoteId='${quoteId}'`);
+        const buffer = await generatePDF(data.records.map((r:any) => ({
+            "ProductCode": r.Product2.ProductCode,
+            "Name": r.Product2.Name,
+            "Quantity": r.Quantity,
+            "UnitPrice": r.UnitPrice,
+            "TotalPrice": r.TotalPrice
+        })))
+        await savePDFToQuote(conn, quoteId, buffer);
+        res.status(201).send({
+            "status": "OK"
+        })
     })
 
     router.get("/opportunityinfo", async (req, res) => {
@@ -41,7 +66,7 @@ export default (app : Application) => {
     router.get("/opportunities", async (req, res) => {
         const session = req.session as any;
         const ctx = session.quoteContext as QuoteContext;
-        const conn = getJSForceConnection(ctx);
+        const conn = await getJSForceConnection(ctx);
         const data = await conn.query(`select id,name from opportunity where stagename='${process.env.OPPORTUNITY_STAGENAME || "Qualification"}' order by Name asc`);
         res.send({
             "status": "OK",
@@ -68,7 +93,7 @@ export default (app : Application) => {
         const session = req.session as any;
         const ctx = session.quoteContext as QuoteContext;
 
-        const conn = getJSForceConnection(ctx);
+        const conn = await getJSForceConnection(ctx);
         const lineitems = await conn.query(`select id,name,quantity,totalprice,listprice,productcode,unitprice,product2id,PricebookEntryId,opportunity.name,opportunity.Pricebook2Id from opportunitylineitem where opportunityid='${ctx.opportunityId}'`);
         res.send(lineitems);
     })
@@ -77,7 +102,7 @@ export default (app : Application) => {
         const session = req.session as any;
         const ctx = session.quoteContext as QuoteContext;
 
-        const conn = getJSForceConnection(ctx);
+        const conn = await getJSForceConnection(ctx);
         const contacts = await conn.query(`select id,name from contact where accountid in (select accountid from opportunity where id='${ctx.opportunityId}') order by name asc`);
         res.send(contacts);
     })
@@ -129,10 +154,7 @@ export default (app : Application) => {
             
             // build pdf
             return generatePDF(records).then(buffer => {
-                return conn.sobject("QuoteDocument").create({
-                    "QuoteId": quoteData.id,
-                    "Document": buffer.toString("base64")
-                })
+                return savePDFToQuote(conn, quoteData.id, buffer);
             })
 
         }).then(() => {
