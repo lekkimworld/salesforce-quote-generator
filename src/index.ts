@@ -58,8 +58,7 @@ app.use(mw.canvasApplicationSignedRequestAuthentication({
                 "profileThumbnailUrl": verifiedSignedRequest.context.user.profileThumbnailUrl,
                 "userId": verifiedSignedRequest.context.user.userId, 
                 "userName": verifiedSignedRequest.context.user.userName, 
-                "email": verifiedSignedRequest.context.user.email/*,
-                "currency": verifiedSignedRequest.context.organization.currencyIsoCode*/
+                "email": verifiedSignedRequest.context.user.email
             } as ApplicationUser
         } as QuoteContext;
         session.quoteContext = ctx;
@@ -99,8 +98,7 @@ app.use(mw.oauthCallback({
                 "profileThumbnailUrl": data.identity.photos.thumbnail,
                 "userId": data.identity.user_id, 
                 "userName": data.identity.username, 
-                "email": data.identity.email/*,
-                "currency": 'SEK'*/
+                "email": data.identity.email
             } as ApplicationUser
         } as QuoteContext;
         session.quoteContext = ctx;

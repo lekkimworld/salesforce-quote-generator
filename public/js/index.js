@@ -81,22 +81,22 @@
             // render table with opportunity line items
             let html = `<h1>${data.records[0].Opportunity.Name}</h1>`;
             html += `<div class="row">`;
-            html += `<div class="col col-2">Product Code</div>
+            html += `<div class="col col-1">SKU</div>
             <div class="col col-3">Name</div>
-            <div class="col col-1">Quant.</div>
+            <div class="col col-2">Quant.</div>
             <div class="col col-2">Unit Price</div>
             <div class="col col-2">List Price</div>
             <div class="col col-2">Total Price</div>`
             html += `</div>`
             data.records.forEach(r => {
                 html += `<div class="row">`;
-                html += `<div class="col col-2">
+                html += `<div class="col col-1">
             ${r.ProductCode || ""}
             </div>
             <div class="col col-3">
             ${r.Name}
             </div>
-            <div class="col col-1 text-right">
+            <div class="col col-2 text-right">
             ${r.Quantity}
             </div>
             <div class="col col-2 text-right">
@@ -132,9 +132,9 @@
     const renderEditQuote = () => {
         const renderTable = (data) => {
             let html = `<div class="row">`;
-            html += `<div class="col col-2">Product Code</div>
+            html += `<div class="col col-1">SKU</div>
             <div class="col col-3">Name</div>
-            <div class="col col-1">Quant.</div>
+            <div class="col col-2">Quant.</div>
             <div class="col col-2">Unit Price</div>
             <div class="col col-2">List Price</div>
             <div class="col col-2">Total Price</div>`
@@ -142,13 +142,13 @@
             let uuid = new Date().getTime();
             data.records.forEach(r => {
                 html += `<div class="row" id="${r.Id}">`;
-                html += `<div class="col col-2">
+                html += `<div class="col col-1">
                 ${r.ProductCode || ""}
             </div>
             <div class="col col-3">
             ${r.Name}
             </div>
-            <div class="col col-1 text-right">
+            <div class="col col-2 text-right">
             <input type="number" value="${r.Quantity}" name="Quantity">
             </div>
             <div class="col col-2 text-right">
