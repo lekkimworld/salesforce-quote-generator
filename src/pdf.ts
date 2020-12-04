@@ -14,6 +14,7 @@ export default (records : Array<any>) : Promise<Buffer> => {
         // received data from Salesforce - build data
         const productTable = [[{text: 'Products', style: 'tableHeader', colSpan: 5}, {}, {}, {}, {} ]];
         records.forEach(r => {
+            if (r.Quantity <= 0) return;
             productTable.push([r.ProductCode || "", r.Name, r.Quantity, r.UnitPrice, r.TotalPrice]);
         })
         productTable.push(["", "", records.reduce((prev, r) => prev + r.Quantity, 0), "", records.reduce((prev, r) => prev + r.TotalPrice, 0)]);

@@ -1,18 +1,11 @@
 import express, { Application, Response, Request, NextFunction } from "express";
-import jsforce from "jsforce";
 import {QuoteContext} from "./types";
 import generatePDF from "./pdf";
 import getJSForceConnection from "./salesforce";
-
-const savePDFToQuote = (conn : jsforce.Connection, quoteId : string, data : Buffer | string) : Promise<any> => {
-    return conn.sobject("QuoteDocument").create({
-        "QuoteId": quoteId,
-        "Document": typeof data === "string" ? data : data.toString("base64")
-    })
-}
+import fetch from "node-fetch";
 
 export default (app : Application) => {
-    
+    // create router for /api
     const router = express.Router();
     app.use("/api", router);
     router.use((req, res, next) => {
@@ -41,7 +34,10 @@ export default (app : Application) => {
             "UnitPrice": r.UnitPrice,
             "TotalPrice": r.TotalPrice
         })))
-        await savePDFToQuote(conn, quoteId, buffer);
+        await conn.sobject("QuoteDocument").create({
+            "QuoteId": quoteId,
+            "Document": buffer.toString("base64")
+        })
         res.status(201).send({
             "status": "OK"
         })
@@ -113,51 +109,77 @@ export default (app : Application) => {
         const session = req.session as any;
         const ctx = session.quoteContext as QuoteContext;
 
-        // get connection
-        const conn = new jsforce.Connection({
-            "instanceUrl": ctx.instanceUrl,
-            "accessToken": ctx.accessToken
-        });
+        // generate PDF
+        const pdf_buffer = await generatePDF(records);
 
-        // create quote
-        conn.sobject("Quote").create({
-            "Name": `Quote - ${records[0].Opportunity.Name}`,
-            "OpportunityId": ctx.opportunityId,
-            "Status": "Draft",
-            "Pricebook2Id": records[0].Opportunity.Pricebook2Id,
-            "ContactId": contactId
-        }).then((data : any) => {
-            // create a quote line per product with a positive quantity
-            return Promise.all([Promise.resolve(data), conn.sobject("QuoteLineItem").create(records.reduce((prev : any[], r : any) => {
-                if (r.Quantity > 0) {
-                    prev.push({
-                        "QuoteId": data.id,
-                        "Quantity": r.Quantity,
-                        "UnitPrice": r.UnitPrice,
-                        "OpportunityLineItemId": r.Id,
-                        "Product2Id": r.Product2Id,
-                        "PricebookEntryId": r.PricebookEntryId
-                    })
-                }
-                return prev;
-            }, []))])
-        }).then((sfData : any) => {
-            const quoteData = sfData[0];
-            const quoteItemData = sfData[1];
-            
-            // ensure we created the quote item lines ok
-            const qlSuccess = quoteItemData.reduce((prev : boolean, q : any) => {
-                if (q.success === false) return false;
-                return prev;
-            }, true);
-            if (!qlSuccess) return Promise.reject(Error("Unable to create all quote item lines"));
-            
-            // build pdf
-            return generatePDF(records).then(buffer => {
-                return savePDFToQuote(conn, quoteData.id, buffer);
+        // create request to salesforce
+        const compositeRequest : any[] = [
+            {
+                "url": "/services/data/v50.0/sobjects/Quote",
+                "body": {
+                    "Name": `Quote - ${records[0].Opportunity.Name}`,
+                    "OpportunityId": ctx.opportunityId,
+                    "Status": "Draft",
+                    "Pricebook2Id": records[0].Opportunity.Pricebook2Id,
+                    "ContactId": contactId
+                },
+                "method": "POST",
+                "referenceId": "ref_quote"
+            },
+            {
+                "url": "/services/data/v50.0/sobjects/QuoteDocument",
+                "body": {
+                    "QuoteId": "@{ref_quote.id}",
+                    "Document": pdf_buffer.toString("base64")
+                },
+                "method": "POST",
+                "referenceId": "ref_quote_document"
+            }
+        ]
+        records.forEach((r : any, idx : number) => {
+            if (r.Quantity <= 0) return;
+
+            compositeRequest.push({
+                "url": "/services/data/v50.0/sobjects/QuoteLineItem",
+                "body": {
+                    "QuoteId": "@{ref_quote.id}",
+                    "Quantity": r.Quantity,
+                    "UnitPrice": r.UnitPrice,
+                    "OpportunityLineItemId": r.Id,
+                    "Product2Id": r.Product2Id,
+                    "PricebookEntryId": r.PricebookEntryId
+                },
+                "method": "POST",
+                "referenceId": `ref_quote_${idx}`
             })
-
-        }).then(() => {
+        })
+        
+        // send request
+        fetch(`${ctx.instanceUrl}/services/data/v50.0/composite/graph`, {
+            "method": "POST",
+            "headers": {
+                "content-type": "application/json",
+                "authorization": `Bearer ${ctx.accessToken}`
+            },
+            "body": JSON.stringify({
+                "graphs": [
+                    {
+                        "graphId": "1",
+                        "compositeRequest": compositeRequest
+                    }
+                ]
+            })
+        }).then(res => res.json()).then((response) => {
+            if (Array.isArray(response) && response[0].errorCode) {
+                return Promise.reject(Error(`${response[0].errorCode} - ${response[0].message}`));
+            }
+            if (!Array.isArray(response) && response.graphs) {
+                // check return code
+                if (response.graphs[0].isSuccessful === false) {
+                    // error
+                    return Promise.reject(Error(`Request not successful (${JSON.stringify(response)})`))
+                }
+            }
             res.status(201).send({
                 "status": "OK"
             })
